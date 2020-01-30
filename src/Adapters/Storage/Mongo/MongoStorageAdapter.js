@@ -417,27 +417,34 @@ export class MongoStorageAdapter implements StorageAdapter {
 
   // Atomically finds and updates an object based on query.
   // Return value not currently well specified.
-  findOneAndUpdate(className: string, schema: SchemaType, query: QueryType, update: any) {
+  findOneAndUpdate(
+    className: string,
+    schema: SchemaType,
+    query: QueryType,
+    update: any,
+    transactionalSession: ?any
+  ) {
     schema = convertParseSchemaToMongoSchema(schema);
     const mongoUpdate = transformUpdate(className, update, schema);
     const mongoWhere = transformWhere(className, query, schema);
-
     return this._adaptiveCollection(className)
-      .then(collection => {
-        const hrstart = process.hrtime();
-        const updateOneOperation = collection._mongoCollection.findAndModify(mongoWhere, [], mongoUpdate, { new: true });
-        if (typeof Logger !== 'undefined' && typeof Logger.PARSE_QUERIES !== 'undefined') {
-          return updateOneOperation.then(results => {
-            const hrend = process.hrtime(hrstart);
-            const ms = hrend[0] * 1000 + hrend[1] / 1000000;
-            Logger.log("PARSE_QUERIES", collection._mongoCollection.s.name + ".findOneAndUpdate query: " + JSON.stringify(query) + " update " + JSON.stringify(update) + " took " + ms + "ms");
-            return results;
-          });
-        } else {
-          return updateOneOperation;
+      .then(collection =>
+        collection._mongoCollection.findOneAndUpdate(mongoWhere, mongoUpdate, {
+          returnOriginal: false,
+          session: transactionalSession || undefined,
+        })
+      )
+      .then(result => mongoObjectToParseObject(className, result.value, schema))
+      .catch(error => {
+        if (error.code === 11000) {
+          throw new Parse.Error(
+            Parse.Error.DUPLICATE_VALUE,
+            'A duplicate value for a field with unique values was provided'
+          );
         }
+        throw error;
       })
-      .then(result => mongoObjectToParseObject(className, result.value, schema));
+      .catch(err => this.handleError(err));
   }
 
   // Hopefully we can get rid of this. It's only used for config and hooks.
