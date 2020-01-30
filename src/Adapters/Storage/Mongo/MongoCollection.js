@@ -68,7 +68,14 @@ export default class MongoCollection {
 
   count(query, { skip, limit, sort, maxTimeMS, readPreference } = {}) {
     const hrstart = process.hrtime();
-    const countOperation = this._mongoCollection.count(query, { skip, limit, sort, maxTimeMS, readPreference });
+    const countOperation = this._mongoCollection.countDocuments(query, {
+      skip,
+      limit,
+      sort,
+      maxTimeMS,
+      readPreference,
+      hint,
+    });
     if (typeof Logger !== 'undefined' && typeof Logger.PARSE_QUERIES !== 'undefined' && Logger.logEnabled(Logger.PARSE_QUERIES)) {
       return countOperation.then((results) => {
         const hrend = process.hrtime(hrstart);
