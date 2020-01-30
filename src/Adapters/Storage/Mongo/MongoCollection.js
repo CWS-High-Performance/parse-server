@@ -128,7 +128,7 @@ export default class MongoCollection {
   // Postgres Note: `INSERT ... ON CONFLICT UPDATE` that is available since 9.5.
   upsertOne(query, update) {
     const hrstart = process.hrtime();
-    const upsertOneOperation = this._mongoCollection.update(query, update, { upsert: true });
+    const upsertOneOperation = this._mongoCollection.updateOne(query, update, { upsert: true });
     if (typeof Logger !== 'undefined' && typeof Logger.PARSE_QUERIES !== 'undefined' && Logger.logEnabled(Logger.PARSE_QUERIES)) {
       return upsertOneOperation.then((results) => {
         const hrend = process.hrtime(hrstart);
